@@ -27,7 +27,7 @@ fn main() {
         Ok(app) => app,
         Err(err) => panic!("出现错误: {}", err),
     };
-    println!("{:#?}", app);
+    // println!("{:#?}", app);
     println!("********* 检索完毕 *********");
 
     // 搜索
@@ -72,6 +72,10 @@ fn process_desktop_files(path: &str) -> Result<App, Box<dyn std::error::Error>> 
 
         let filename = path.display().to_string();
         let content = read_to_string(&filename)?;
+
+        // 只解析 [Desktop Entry] 这部分的数据
+        let sections = content.split("[Desktop");
+        let content: String = sections.filter(|s| s.starts_with(" Entry]")).collect();
 
         // 过滤隐藏的desktop
         if let Some(no_display) = content
