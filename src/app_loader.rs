@@ -9,7 +9,6 @@ pub struct AppLoader;
 impl AppLoader {
     /// `load` 加载应用程序
     pub fn load() -> Apps {
-
         let mut desktop_paths: Vec<PathBuf> = vec![
             PathBuf::from("/usr/share/applications"),
             PathBuf::from("/var/lib/snapd/desktop/applications"),
@@ -197,7 +196,9 @@ impl AppLoader {
             }
         }
         // 移除结尾的逗号
-        search_key.remove(search_key.len() - 1);
+        if search_key.ends_with(",") {
+            search_key.pop();
+        }
         app_entry.search_key = search_key.to_lowercase();
 
         let exec = content

@@ -14,6 +14,7 @@ impl Launcher {
 
     /// `run` 处理搜索
     ///
+    /// # Examples
     /// ```
     /// const PATH: &str = "/usr/share/applications";
     /// let app = process_desktop_files(PATH).unwrap();
@@ -88,30 +89,44 @@ impl Launcher {
                 Some(app) => app,
                 None => continue,
             };
-            println!("打开的文件：{}", application.exec);
-            let parts: Vec<&str> = application.exec.split_whitespace().collect();
-            let cmd = parts[0];
+            // 打开程序
+            Self::open_application(&application.exec);
+        }
+    }
 
-            // 解析占位符（去除 %U，%F，……）
-            let args: Vec<&str> = parts[1..]
-                .iter()
-                .filter(|arg| !arg.contains('%'))
-                .copied()
-                .collect();
+    /// `open_application` 打开应用程序
+    ///
+    /// # Examples
+    /// ```
+    /// open_application("Exec=/usr/bin/wechat %U");
+    /// ```
+    fn open_application(exec: &str) {
+        println!("打开的文件：{}", exec);
+        let parts: Vec<&str> = exec.split_whitespace().collect();
+        let Some(cmd) = parts.first() else {
+            println!("exec为空，无法执行打开操作");
+            return;
+        };
 
-            match Command::new(cmd)
-                .args(&args)
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-            {
-                Ok(child) => {
-                    println!("✅ 启动成功：{}", child.id());
-                }
-                Err(err) => {
-                    eprintln!("❌ 启动失败：{}", err);
-                }
+        // 解析占位符（去除 %U，%F，……）
+        let args: Vec<&str> = parts[1..]
+            .iter()
+            .filter(|arg| !arg.contains('%'))
+            .copied()
+            .collect();
+
+        match Command::new(cmd)
+            .args(&args)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+        {
+            Ok(child) => {
+                println!("✅ 启动成功：{}", child.id());
+            }
+            Err(err) => {
+                eprintln!("❌ 启动失败：{}", err);
             }
         }
     }
