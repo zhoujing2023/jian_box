@@ -22,15 +22,39 @@ impl SearchEngine {
     ///   }
     /// ```
     pub fn search(&self, keyword: &str) -> Vec<&AppEntry> {
-        let mut results = Vec::with_capacity(10);
         let keyword_lower = keyword.to_lowercase();
         let keyword_lower = keyword_lower.as_str();
-        for app in self.apps.iter() {
-            let result = app.search_key.find(keyword_lower);
-            if let Some(_) = result {
-                results.push(app);
+        self.apps
+            .iter()
+            .filter(|app| Self::fuzzy_match(&app.search_key, keyword_lower))
+            .collect()
+    }
+
+    /// `fuzzy_match` 模糊匹配
+    ///
+    /// # Examples
+    /// ```
+    /// let name = "WeChat".to_lowercase();
+    /// println!("{}", fuzzy_match(&name, "we"));
+    /// println!("{}", fuzzy_match(&name, "tw"));
+    /// ```
+    fn fuzzy_match(text: &str, pattern: &str) -> bool {
+        if pattern.is_empty() {
+            return false;
+        }
+
+        let mut pattern_chars = pattern.chars();
+        let mut cur_pattern_char = pattern_chars.next();
+
+        for char in text.chars() {
+            if let Some(p_char) = cur_pattern_char {
+                if char == p_char {
+                    cur_pattern_char = pattern_chars.next();
+                }
+            } else {
+                return true;
             }
         }
-        results
+        cur_pattern_char.is_none()
     }
 }
