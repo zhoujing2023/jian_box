@@ -1,6 +1,6 @@
+use crate::app_runner::AppRunner;
 use crate::search_engine::SearchEngine;
-use std::io::{Write, stdin, stdout};
-use std::process::{Command, Stdio};
+use std::io::{stdin, stdout, Write};
 
 pub struct Launcher {
     search_engine: SearchEngine,
@@ -48,10 +48,11 @@ impl Launcher {
             }
             for (i, result) in results.iter().enumerate() {
                 println!(
-                    "序号:{}\t名称：{}\t说明：{}",
+                    "序号:{}\t名称：{}\t分数：{}\t说明：{}",
                     i + 1,
                     result.name,
-                    result.comment
+                    result.score.borrow(),
+                    result.comment,
                 )
             }
             println!("查询到的数量：{}", results.len());
@@ -89,45 +90,11 @@ impl Launcher {
                 Some(app) => app,
                 None => continue,
             };
-            // 打开程序
-            Self::open_application(&application.exec);
-        }
-    }
-
-    /// `open_application` 打开应用程序
-    ///
-    /// # Examples
-    /// ```
-    /// open_application("Exec=/usr/bin/wechat %U");
-    /// ```
-    fn open_application(exec: &str) {
-        println!("打开的文件：{}", exec);
-        let parts: Vec<&str> = exec.split_whitespace().collect();
-        let Some(cmd) = parts.first() else {
-            println!("exec为空，无法执行打开操作");
-            return;
-        };
-
-        // 解析占位符（去除 %U，%F，……）
-        let args: Vec<&str> = parts[1..]
-            .iter()
-            .filter(|arg| !arg.contains('%'))
-            .copied()
-            .collect();
-
-        match Command::new(cmd)
-            .args(&args)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
-        {
-            Ok(child) => {
-                println!("✅ 启动成功：{}", child.id());
-            }
-            Err(err) => {
-                eprintln!("❌ 启动失败：{}", err);
-            }
+            *application.score.borrow_mut() += 1;
+            // 更新分数
+            self.search_engine.persistent_usage();
+            // 打开应用程序
+            AppRunner::run(&application.exec);
         }
     }
 }

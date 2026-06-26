@@ -1,7 +1,9 @@
+use crate::app_usage::AppUsage;
 use crate::model::{AppEntry, Apps};
 use std::env;
 use std::fs::{DirEntry, read_dir, read_to_string};
 use std::path::PathBuf;
+use crate::env_load::HOME_DIR;
 
 /// 应用程序加载器
 pub struct AppLoader;
@@ -13,7 +15,7 @@ impl AppLoader {
             PathBuf::from("/usr/share/applications"),
             PathBuf::from("/var/lib/snapd/desktop/applications"),
         ];
-        if let Some(home_dir) = dirs::home_dir() {
+        if let Some(home_dir) = HOME_DIR.get() {
             desktop_paths.push(home_dir.join(".local/share/applications"));
         }
 
@@ -58,6 +60,14 @@ impl AppLoader {
                 None => continue,
             };
             apps.push(app_entry);
+        }
+
+        // 读取分数
+        let app_configs = AppUsage::load();
+        if let Some(app_configs) = app_configs {
+            for app in &mut apps {
+              *app.score.borrow_mut() = app_configs.scores.get(&app.desktop_file).copied().unwrap_or(0);
+            }
         }
         apps
     }
