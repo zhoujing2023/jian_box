@@ -1,10 +1,14 @@
 use crate::app_runner::AppRunner;
+use crate::config::Config;
 use crate::search_engine::SearchEngine;
-use std::io::{stdin, stdout, Write};
+use std::io::{Write, stdin, stdout};
 
 pub struct Launcher {
     search_engine: SearchEngine,
 }
+
+// 每次使用增加的分数
+const SCORE_INCREMENT: u32 = 1;
 
 impl Launcher {
     /// `new` 创建实例
@@ -16,14 +20,24 @@ impl Launcher {
     ///
     /// # Examples
     /// ```
-    /// const PATH: &str = "/usr/share/applications";
-    /// let app = process_desktop_files(PATH).unwrap();
-    /// search_handler(&app);
+    /// use jian_box::{AppLoader, Config, Launcher, SearchEngine};
+    ///
+    /// let config = Config::load().unwrap();
+    /// let apps = AppLoader::load(&config);
+    /// let engine = SearchEngine::new(apps);
+    /// let launcher = Launcher::new(engine);
+    /// launcher.run(&config);
     /// ```
-    pub fn run(&self) {
+    pub fn run(&self, config: &Config) {
         loop {
             print!("请输入desktop名称（输入exit结束程序）：");
-            stdout().flush().unwrap();
+            match stdout().flush() {
+                Ok(_) => {}
+                Err(e) => {
+                    eprint!("无法刷新输出：{}", e);
+                    continue;
+                }
+            }
             let mut input = String::new();
             match stdin().read_line(&mut input) {
                 Ok(_) => (),
@@ -60,7 +74,14 @@ impl Launcher {
             loop {
                 println!("请选择要打开的应用（序号，0=退出）：");
                 let mut index = String::new();
-                stdin().read_line(&mut index).expect("读取失败");
+                match stdin().read_line(&mut index) {
+                    Ok(_) => {}
+                    Err(err) => {
+                        eprintln!("读取失败：{}", err);
+                        println!("请重新输入~");
+                        continue;
+                    }
+                }
                 let index: usize = match index.trim().parse() {
                     Ok(num) => num,
                     Err(err) => {
@@ -90,9 +111,11 @@ impl Launcher {
                 Some(app) => app,
                 None => continue,
             };
-            *application.score.borrow_mut() += 1;
+            // 应用分数递增
+            let current_score = *application.score.borrow();
+            *application.score.borrow_mut() = current_score.saturating_add(SCORE_INCREMENT);
             // 更新分数
-            self.search_engine.persistent_usage();
+            self.search_engine.persistent_usage(&config);
             // 打开应用程序
             AppRunner::run(&application.exec);
         }

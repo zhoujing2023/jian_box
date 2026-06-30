@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 pub type Apps = Vec<AppEntry>;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct AppEntry {
     // 应用名称
     pub name: String,

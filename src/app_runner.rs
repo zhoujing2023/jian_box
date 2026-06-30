@@ -8,7 +8,8 @@ impl AppRunner {
     ///
     /// # Examples
     /// ```
-    /// run("Exec=/usr/bin/wechat %U");
+    /// use jian_box::AppRunner;
+    /// AppRunner::run("Exec=/usr/bin/wechat %U");
     /// ```
     pub fn run(exec: &str) {
         println!("打开的文件：{}", exec);

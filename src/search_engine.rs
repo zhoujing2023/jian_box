@@ -1,4 +1,5 @@
 use crate::app_usage::AppUsage;
+use crate::config::Config;
 use crate::model::{AppEntry, Apps};
 
 pub struct SearchEngine {
@@ -6,7 +7,16 @@ pub struct SearchEngine {
 }
 
 impl SearchEngine {
-    /// `new` 创建实例
+
+    /// `new` 创建搜索实例
+    ///
+    /// # Examples
+    /// ```
+    /// use jian_box::{AppLoader, Config, SearchEngine};
+    /// let config = Config::load().unwrap();
+    /// let apps = AppLoader::load(&config);
+    /// let engine = SearchEngine::new(apps);
+    /// ```
     pub fn new(apps: Apps) -> Self {
         Self { apps }
     }
@@ -16,11 +26,13 @@ impl SearchEngine {
     /// # Examples
     ///
     /// ```
-    ///   let results = search(&apps, String::from("wechat"));
-    ///   if let Some(results) = results {
-    ///       println!("{:#?}", results);
-    ///       println!("查询到的数量：{}", results.len());
-    ///   }
+    /// use jian_box::{AppLoader, Config, SearchEngine};
+    ///
+    /// let config = Config::load().unwrap();
+    /// let apps = AppLoader::load(&config);
+    /// let engine = SearchEngine::new(apps);
+    /// let results = engine.search("we");
+    /// assert!(results.len() > 0);
     /// ```
     pub fn search(&self, keyword: &str) -> Vec<&AppEntry> {
         let keyword_lower = keyword.to_lowercase();
@@ -36,13 +48,6 @@ impl SearchEngine {
     }
 
     /// `fuzzy_match` 模糊匹配
-    ///
-    /// # Examples
-    /// ```
-    /// let name = "WeChat".to_lowercase();
-    /// println!("{}", fuzzy_match(&name, "we"));
-    /// println!("{}", fuzzy_match(&name, "tw"));
-    /// ```
     fn fuzzy_match(text: &str, pattern: &str) -> bool {
         if pattern.is_empty() {
             return false;
@@ -64,7 +69,59 @@ impl SearchEngine {
     }
 
     /// `persistent_usage` 持久化分数
-    pub fn persistent_usage(&self) {
-        AppUsage::update_usage_file(&self.apps);
+    pub fn persistent_usage(&self, config: &Config) {
+        AppUsage::update_usage_file(&self.apps, &config);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::model::AppEntry;
+    use crate::search_engine::SearchEngine;
+    use std::cell::RefCell;
+
+    /// 测试模糊匹配
+    #[test]
+    fn test_fuzzy_match_test() {
+        assert!(SearchEngine::fuzzy_match("test", "te"));
+        assert!(SearchEngine::fuzzy_match("wechat", "wt"));
+        assert!(SearchEngine::fuzzy_match("krita", "kr"));
+        assert!(!SearchEngine::fuzzy_match("wechat", "wx"));
+    }
+
+    #[test]
+    fn test_fuzzy_match_is_case_sensitive() {
+        assert!(!SearchEngine::fuzzy_match("test", "TE"));
+        assert!(!SearchEngine::fuzzy_match("wechat", "WeChat"));
+    }
+
+    /// 测试排序
+    #[test]
+    fn test_search_returns_sorted_by_score() {
+        let apps = vec![
+            AppEntry {
+                name: "微信".to_string(),
+                search_key: "wechat,微信".to_string(),
+                score: RefCell::new(5),
+                ..Default::default()
+            },
+            AppEntry {
+                name: "blender".to_string(),
+                search_key: "blender,布兰德".to_string(),
+                score: RefCell::new(3),
+                ..Default::default()
+            },
+            AppEntry {
+                name: "Godot".to_string(),
+                search_key: "godot".to_string(),
+                score: RefCell::new(1),
+                ..Default::default()
+            },
+        ];
+        let search_engine = SearchEngine::new(apps);
+        let results = search_engine.search("e");
+        assert_eq!(results.len(), 2);
+        assert_eq!(*results[0].score.borrow(), 5);
+        assert_eq!(*results[1].score.borrow(), 3);
     }
 }

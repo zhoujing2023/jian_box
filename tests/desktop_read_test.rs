@@ -38,3 +38,13 @@ fn test_fuzzy_match() {
     println!("{}", fuzzy_match(&name, "ca"));
     println!("{}", fuzzy_match(&name, "tw"));
 }
+
+#[test]
+fn test_cut_desktop_content() {
+    let content = read_to_string("/usr/share/applications/wechat.desktop").unwrap();
+    let exec_content = content.lines().find(|s| s.starts_with("Exec"));
+    if let Some(exec_content) = exec_content {
+        let ss = exec_content.strip_prefix("Exec=");
+        println!("{:?}", ss);
+    }
+}
